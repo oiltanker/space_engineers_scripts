@@ -1,0 +1,26 @@
+Component           Min      Pct
+
+BulletproofGlass    500      2%
+Canvas              100      0.01%
+Computer            1000     5%
+Construction        5000     20%
+Detector            100      0.1%
+Display             500      0.5%
+EngineerPlushie     0        0%
+Explosives          100      0.1%
+Girder              1000     0.5%
+GravityGen          1        0.1%
+InteriorPlate       5000     10%
+LargeTube           500      2%
+Medical             100      0.1%
+MetalGrid           1000     2%
+Motor               1000     4%
+PowerCell           20       1%
+RadioComm           100      0.5%
+Reactor             25       2%
+SabiroidPlushie     0        0%
+SmallTube           1000     3%
+SolarCell           100      0.1%
+SteelPlate          10000    40%
+Superconductor      500      1%
+Thrust              15       5%
