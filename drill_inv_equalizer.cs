@@ -1,5 +1,5 @@
 public const double dEPS = 0.001d;
-public const float EPS = 0.001f;
+public const float EPS = 0.01f;
 public const int ENG_UPS = 60;
 public const double radToDegMul = 180 / Math.PI;
 
