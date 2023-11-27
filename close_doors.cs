@@ -23,7 +23,7 @@ public Dictionary<IMyDoor, float> doorsToClose = new Dictionary<IMyDoor, float>(
 public IMyTextSurface mySurface = null;
 
 public void print(string str) => mySurface.WriteText(str + "\n", true);
-public void wipe() => mySurface.WriteText(" ", false);
+public void wipe() => mySurface.WriteText("", false);
 
 public string serialize() {
     string str = active.ToString();
@@ -57,7 +57,10 @@ public Program() {
     mySurface.ContentType = ContentType.TEXT_AND_IMAGE;
     wipe();
     print("Door closing initialized.\n    start - starts the process\n    stop - stops the script");
-    if (active) Runtime.UpdateFrequency = UpdateFrequency.Update10 | UpdateFrequency.Update100;
+    if (active) {
+        Runtime.UpdateFrequency = UpdateFrequency.Update10;
+        updateDoors();
+    }
 }
 
 public void Save() {
@@ -91,9 +94,12 @@ public void updateDoors() {
     print("Updating doors ...");
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
+
+    doorsToClose = new Dictionary<IMyDoor, float>(); 
     blocks.Where(b => b is IMyDoor && !(b is IMyAirtightHangarDoor) && b.IsSameConstructAs(Me)).Select(b => b as IMyDoor).ToList().ForEach(d => {
         if (!doorsToClose.ContainsKey(d)) doorsToClose.Add(d, 0f);
     });
+
     airlocks = new List<airlock>();
     var used = new List<IMyDoor>();
     foreach (var d in doorsToClose.Keys) {
@@ -109,14 +115,15 @@ public void updateDoors() {
     }
 }
 
+int runTick = 0;
 public void Main(string argument, UpdateType updateSource) {
     if (!string.IsNullOrEmpty(argument)) {
-        if (argument == "start") {
+        if (argument == "start" && !active) {
+            updateDoors();
             print("Door closing started ....");
-            doorsToClose = new Dictionary<IMyDoor, float>(); 
             active = true;
-            Runtime.UpdateFrequency = UpdateFrequency.Update10 | UpdateFrequency.Update100;
-        } else if (argument == "stop") {
+            Runtime.UpdateFrequency = UpdateFrequency.Update10;
+        } else if (argument == "stop" && active) {
             active = false;
             Runtime.UpdateFrequency = UpdateFrequency.None;
             print("Door closing halted ....");
@@ -124,8 +131,11 @@ public void Main(string argument, UpdateType updateSource) {
     } else if (active) {
         wipe();
         try {
-            if (updateSource == UpdateType.Update10) runCheck();
-            else if (updateSource == UpdateType.Update100) updateDoors();
+            if (runTick >= 20) {
+                updateDoors();
+                runTick = 0;
+            } else runTick++;
+            runCheck();
         } catch (Exception e) {
             print(e.Message + "\n\n" + e.StackTrace.ToString());
         }
