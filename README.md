@@ -2,9 +2,13 @@
 
 Python based build system for Space Engineers. Builds scripts by utilizing `@` tags to signify special actions and on success will put the resulting script in your clipboard.
 
+**NOTE:** requires `pyperclip` package
+
 All common files can be placed inside `lib` folder. Naming of *'includes'* is comprised from relative filepath to the C# file, where all splashes `/` are replaced with dots `.` and file extension `.cs` is omitted *(e.g. `@include lib.gyroWrapper` is `<root_folder>/lib/gyroWrapper.cs`)*.
 
 In `.vscode` folder are included vs code configurations that on ***F5*** will trigger script build on the current file and if successful a built version of the script will be in your clipboard.
+
+**NOTE:** requires `F5 Anything` extension
 
 ## Including and excluding
 
@@ -44,7 +48,7 @@ By default type definitions are located in `<root_folder>/lib/__type_defs__.cs` 
 They work by replacing not in-string types with another type, e.g.
 
 ```c#
-public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@<some_Tag>(\s|$)");
+public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@some_tag(\s|$)");
 ```
 
 extends to:
