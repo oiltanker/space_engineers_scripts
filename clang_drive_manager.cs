@@ -6,9 +6,16 @@ public static readonly System.Text.RegularExpressions.Regex tagRegex = new Syste
 public const float onVel = 5f;
 public const float offVel = -5f;
 
+public static IMyTextSurface myLcd = null;
 public static IMyTextPanel debugLcd = null;
-public static void wipe() { if (debugLcd != null) debugLcd.WriteText(""); }
-public static void print(string str) { if (debugLcd != null) debugLcd.WriteText(str + '\n', true); }
+public static void wipe() {
+    if (debugLcd != null) debugLcd.WriteText("");
+    if (myLcd != null) myLcd.WriteText("");
+}
+public static void print(string str) {
+    if (debugLcd != null) debugLcd.WriteText(str + '\n', true);
+    if (myLcd != null) myLcd.WriteText(str + '\n', true);
+}
 
 public enum dir {
     forward, backward,
@@ -34,53 +41,120 @@ public static dir matchDir(Vector3D dV, MatrixD anchor) {
     else throw new ArgumentException("Wrong anchor matrix.");
 }
 
+public static float chooseRPY(align align, dir dir, float roll, float pitch, float yaw) { // possibly faster than multiplying by dot products
+    switch (dir) {
+        case dir.forward:
+            if (align.up == dir.forward || align.up == dir.backward) return -roll;
+            else                                                     return  roll;
+        case dir.backward:
+            if (align.up == dir.forward || align.up == dir.backward) return  roll;
+            else                                                     return -roll;
+        case dir.left:
+            if (align.up == dir.left    || align.up == dir.right)    return -pitch;
+            else                                                     return  pitch;
+        case dir.right:
+            if (align.up == dir.left    || align.up == dir.right)    return  pitch;
+            else                                                     return -pitch;
+        case dir.up:
+            if (align.up == dir.up      || align.up == dir.down)     return  yaw;
+            else                                                     return -yaw;
+        case dir.down:
+            if (align.up == dir.up      || align.up == dir.down)     return -yaw;
+            else                                                     return  yaw;
+        default: return Single.NaN;
+    }
+}
+public class wGyroArr {
+    public MatrixD anchor;
+    public Dictionary<align, List<IMyGyro>> gMap;
+    public int count { get {
+        var res = 0;
+        foreach (var gs in gMap.Values) res += gs.Count(g => g.IsWorking);
+        return res;
+    } }
+    public IEnumerable<IMyGyro> gyros { get {
+        return gMap.Values.Cast<IEnumerable<IMyGyro>>().Aggregate((acc, next) => acc.Concat(next));
+    } }
+    public wGyroArr(IEnumerable<IMyGyro> gyros, MatrixD? anchor = null) {
+        this.anchor = anchor != null ? anchor.Value : gyros.FirstOrDefault().CubeGrid.WorldMatrix;
+        gMap = new Dictionary<align, List<IMyGyro>>();
+        add(gyros);
+    }
+    public wGyroArr(IEnumerable<IMyGyro> gyros, IMyTerminalBlock anchor = null): this(gyros, anchor?.WorldMatrix) {}
+    public void add(IMyGyro gyro) {
+        var a = align.determine(gyro.WorldMatrix, anchor);
+        if (!gMap.ContainsKey(a)) gMap.Add(a, new List<IMyGyro>{ gyro });
+        else if (!gMap[a].Contains(gyro)) gMap[a].Add(gyro);
+    }
+    public void add(IEnumerable<IMyGyro> gyros) { foreach (var g in gyros) add(g); }
+    public void remove(IMyGyro gyro) {
+        foreach (var gs in gMap.Values) if (gs.Contains(gyro)) {
+            gs.Remove(gyro);
+            break;
+        }
+    }
+    public void remove(IEnumerable<IMyGyro> gyros) { foreach (var g in gyros) remove(g); }
+    public void clean() {
+        foreach (var a in gMap.Keys.ToList()) {
+            for (var i = 0; i < gMap[a].Count; i++) if (!gMap[a][i].IsWorking) { gMap[a].RemoveAt(i); i--; }
+            if (gMap[a].Count <= 0) gMap.Remove(a);
+        }
+    }
+    public void reset() { foreach (var gs in gMap.Values) gs.ForEach(g => { if (g.IsFunctional) { g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f; }; }); }
+    public void capture() { foreach (var gs in gMap.Values) gs.ForEach(g => { if (g.IsFunctional) g.GyroOverride = true; }); }
+    public void release(bool doReset = true) {
+        foreach (var gs in gMap.Values) gs.ForEach(g => { if (g.IsFunctional) g.GyroOverride = false; });
+        if (doReset) reset();
+    }
+    public void setRPY(float roll, float pitch, float yaw) { // setting values & cleaning array
+        foreach (var a in gMap.Keys.ToList()) {
+            var gRoll  = chooseRPY(a, a.forward, roll, pitch, yaw);
+            var gPitch = chooseRPY(a, a.left   , roll, pitch, yaw);
+            var gYaw   = chooseRPY(a, a.up     , roll, pitch, yaw);
+            for (var i = 0; i < gMap[a].Count; i++) {
+                var g = gMap[a][i];
+                if (g.IsWorking) { g.Roll = gRoll; g.Pitch = gPitch; g.Yaw = gYaw; }
+                else { gMap[a].RemoveAt(i); i--; }
+            }
+            if (gMap[a].Count <= 0) gMap.Remove(a);
+        }
+    }
+}
+
 public int state = 0;
 public bool allWorking = false;
 public IMyShipController controller = null;
 public Dictionary<dir, IMyPistonBase> pMap = null;
-public Dictionary<IMyGyro, align> gMap = null;
+public wGyroArr gFirst  = null;
+public wGyroArr gSecond = null;
 
-public float chooseRPY(dir dir, float roll, float pitch, float yaw) { // possibly faster that multiplying by dot products
-    switch (dir) {
-        case dir.forward:  return roll;
-        case dir.backward: return -roll;
-        case dir.left:     return pitch;
-        case dir.right:    return -pitch;
-        case dir.up:       return yaw;
-        case dir.down:     return -yaw;
-        default:           return Single.NaN;
-    }
-}
+
 public bool checkGyros() {
     var cRoll = controller.RollIndicator; var cPitch = controller.RotationIndicator.X; var cYaw = controller.RotationIndicator.Y;
     print($"cRoll: {cRoll.ToString("0.000")}   cPitch: {cPitch.ToString("0.000")}   cYaw: {cYaw.ToString("0.000")}");
-    // var cPitch = controller.RotationIndicator.X; var cYaw = controller.RotationIndicator.Y;
-    // print($"cPitch: {cPitch.ToString("0.000")}   cYaw: {cYaw.ToString("0.000")}");
-    foreach (var g in gMap.Keys) {
-        g.Enabled = true;
-        g.GyroOverride = true;
-        g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f;
-    }
-    var wGs = gMap.Where(ga => ga.Key.IsWorking).ToList();
-    var cnt = wGs.Count % 2 == 0 ? wGs.Count - 1 : wGs.Count - 2;
-    var first = wGs.GetRange(0, cnt / 2); var second = wGs.GetRange(cnt / 2 + 1, cnt / 2);
+
+    if (gFirst.count + gSecond.count < 2) return true;
+
+    Action<wGyroArr, wGyroArr> transferTo = (f, s) => {
+        int toTransfer = (f.count - s.count) / 2;
+        if (toTransfer > 0) {
+            var gs = f.gyros.Take(toTransfer);
+            f.remove(gs);
+            s.add(gs);
+        } else f.remove(f.gyros.First());
+    };
+    if      (gFirst.count  > gSecond.count) transferTo(gFirst,  gSecond);
+    else if (gSecond.count > gFirst.count)  transferTo(gSecond, gFirst);
+
+    gFirst.capture();
+    gSecond.capture();
 
     var pRoll  = cRoll  < -EPS ? -60f : 60f; var nRoll  = cRoll  > EPS ? 60f : -60f;
-    // var pRoll  = 60f;                        var nRoll  = -60f;
     var pPitch = cPitch < -EPS ? -60f : 60f; var nPitch = cPitch > EPS ? 60f : -60f;
     var pYaw   = cYaw   < -EPS ? -60f : 60f; var nYaw   = cYaw   > EPS ? 60f : -60f;
-    first.ForEach(ga => {
-        var g = ga.Key; var a = ga.Value;
-        g.Roll  = chooseRPY(a.forward, pRoll, pPitch, pYaw);
-        g.Pitch = chooseRPY(a.left   , pRoll, pPitch, pYaw);
-        g.Yaw   = chooseRPY(a.up     , pRoll, pPitch, pYaw);
-    });
-    second.ForEach(ga => {
-        var g = ga.Key; var a = ga.Value;
-        g.Roll  = chooseRPY(a.forward, nRoll, nPitch, nYaw);
-        g.Pitch = chooseRPY(a.left   , nRoll, nPitch, nYaw);
-        g.Yaw   = chooseRPY(a.up     , nRoll, nPitch, nYaw);
-    });
+
+    gFirst.setRPY (pRoll, pPitch, pYaw);
+    gSecond.setRPY(nRoll, nPitch, nYaw);
     return true; // no fail condition
 }
 public void update() {
@@ -146,9 +220,14 @@ public void init() {
             print("Wrongly built clang drive.");
         }
 
-        gMap = new Dictionary<IMyGyro, align>();
-        blocks.Where(b => b is IMyGyro && b.IsSameConstructAs(Me) && b.IsFunctional && tagRegex.IsMatch(b.CustomName))
-              .ToList().ForEach(b => gMap.Add(b as IMyGyro, align.determine(b.WorldMatrix, mat)));
+        if (gFirst != null) gFirst.release();
+        if (gSecond != null) gSecond.release();
+        var gyros = blocks.Where(b => b is IMyGyro && b.CubeGrid == Me.CubeGrid && b.IsWorking && tagRegex.IsMatch(b.CustomName)).Select(b => b as IMyGyro).ToList();
+        if (gyros.Count > 0) {
+            var cnt = gyros.Count % 2 == 0 ? gyros.Count - 1 : gyros.Count - 2;
+            gFirst  = new wGyroArr(gyros.GetRange(0,           cnt / 2), mat);
+            gSecond = new wGyroArr(gyros.GetRange(cnt / 2 + 1, cnt / 2), mat);
+        }
 
         blocks.Where(b => b is IMyThrust && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName)).ToList().ForEach(b => (b as IMyThrust).Enabled = false);
 
@@ -158,18 +237,23 @@ public void init() {
 
 public void shutdown() {
     foreach (var p in pMap.Values) p.Velocity = -5f;
-    foreach (var g in gMap.Keys) {
-        g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f;
-        g.GyroOverride = false;
-    }
+    gFirst.release();
+    gSecond.release();
 
-    pMap = null; gMap = null; controller = null;
+    pMap = null; controller = null; gFirst = null; gSecond = null;
     allWorking = false;
 }
 
 public Program() {
     Echo("");
     Me.CustomName = "@cdrive program";
+    if (Me.CubeGrid.GridSizeEnum == MyCubeSize.Large) {
+        myLcd = Me.GetSurface(0);
+        myLcd.ContentType = ContentType.TEXT_AND_IMAGE;
+        myLcd.FontSize = 1;
+        myLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
+    }
+
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);
     if (state == 1) init();
     Runtime.UpdateFrequency = UpdateFrequency.Update1;
