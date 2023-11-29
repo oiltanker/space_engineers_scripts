@@ -1,28 +1,4 @@
-public const double dEPS = 0.001d;
-
-public enum dir {
-    forward, backward,
-    left, right,
-    up, down
-}
-public struct align {
-    public dir forward;
-    public dir left;
-    public dir up;
-    private align(dir f, dir l, dir u) { this.forward = f; this.left = l;  this.up = u; }
-    public static align determine(MatrixD target, MatrixD anchor) {
-        return new align(matchDir(target.Forward, anchor), matchDir(target.Left, anchor), matchDir(target.Up, anchor));
-    }
-}
-public static dir matchDir(Vector3D dV, MatrixD anchor) {
-    if      ((dV -  anchor.Forward).Length() < dEPS) return dir.forward;
-    else if ((dV - anchor.Backward).Length() < dEPS) return dir.backward;
-    else if ((dV -     anchor.Left).Length() < dEPS) return dir.left;
-    else if ((dV -    anchor.Right).Length() < dEPS) return dir.right;
-    else if ((dV -       anchor.Up).Length() < dEPS) return dir.up;
-    else if ((dV -     anchor.Down).Length() < dEPS) return dir.down;
-    else throw new ArgumentException("Wrong anchor matrix.");
-}
+@import lib.alignment
 
 public static float chooseRPY(align align, dir dir, float roll, float pitch, float yaw) { // possibly faster than multiplying by dot products
     switch (dir) {
@@ -47,6 +23,7 @@ public static float chooseRPY(align align, dir dir, float roll, float pitch, flo
         default: return Single.NaN;
     }
 }
+
 public class wGyro {
     public IMyGyro gyro;
     public align alignment;
