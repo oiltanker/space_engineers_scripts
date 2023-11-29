@@ -243,9 +243,9 @@ public void init() {
         if (gSecond != null) gSecond.release();
         var gyros = blocks.Where(b => b is IMyGyro && b.CubeGrid == Me.CubeGrid && b.IsWorking && tagRegex.IsMatch(b.CustomName)).Select(b => b as IMyGyro).ToList();
         if (gyros.Count > 0) {
-            var cnt = gyros.Count % 2 == 0 ? gyros.Count : gyros.Count - 1;
-            gFirst  = new wGyroArr(gyros.GetRange(0,       cnt / 2), mat);
-            gSecond = new wGyroArr(gyros.GetRange(cnt / 2, cnt / 2), mat);
+            int cnt = (gyros.Count % 2 == 0 ? gyros.Count : gyros.Count - 1) / 2;
+            gFirst  = new wGyroArr(gyros.GetRange(0,   cnt), mat);
+            gSecond = new wGyroArr(gyros.GetRange(cnt, cnt), mat);
         }
 
         blocks.Where(b => b is IMyThrust && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName)).ToList().ForEach(b => (b as IMyThrust).Enabled = false);
