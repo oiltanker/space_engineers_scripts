@@ -11,19 +11,55 @@ def findImport(root, fileName):
     filePath = "{}/{}.cs".format(root, fileName.replace('.', '/'))
     return path.isfile(filePath), filePath
 
+inComment = False
 def processTypeDefs(line):
-    while True:
-        match = re.match(r'^([^"]*"[^"]*"[^"]*)*([^"]*)(@[A-z0-9_]+)', line)
-        if match is None: break
+    global inComment
+    result = ''
 
-        rStr = match.group(3)
-        if rStr in type_defs.keys():
-            rType = type_defs[rStr]
-            line = line[:match.start(3)] + rType + line[match.end(3):]
+    inQuotes = False
+    isRegex = False
+    escaping = 0
+    cSlashes = 0
+    lastStar = False
+    inLineComment = False
+    inTag = False
+    tagStr = ''
+    for char in line:
+        if inQuotes:
+            if   char == '"' and escaping <= 0: inQuotes = False
+            elif char == '\\' and not isRegex and escaping <= 0: escaping = 1
         else:
-            print('ERROR: unknown type definition "{}"'.format(rStr))
-            return None
-    return line
+            if   char == '"':
+                inQuotes = True
+                if inTag:
+                    inTag = False
+                    isRegex = True
+            elif char == '*':
+                if cSlashes == 1: inComment = True
+                else: lastStar = True
+            elif char == '/':
+                if not lastStar:
+                    if cSlashes >= 1:
+                        cSlashes = 0
+                        inLineComment = True
+                    else: cSlashes += 1
+                else: inComment = False
+            elif char == '@': inTag = True
+
+        if char != '/': cSlashes = 0
+        if inTag and not (char.isalnum() or char == '_') and len(tagStr) > 0: inTag = False
+
+        if inQuotes or inLineComment or inComment or not inTag:
+            if len(tagStr) == 1:  result += '@' + char
+            elif len(tagStr) > 1: result += type_defs[tagStr] + char
+            else: result += char
+            tagStr = ''
+        else:
+            tagStr += char
+
+        if escaping > 1: escaping = 0
+        elif escaping == 1: escaping += 1
+    return result
 
 def buildScript(root, fileName):
     contents = None
@@ -48,14 +84,14 @@ def buildScript(root, fileName):
                 if isOk:
                     iContents = buildScript(root, iFile)
                     if iContents is None: return None
-                    contents += iContents
+                    contents += "// >>>> >>>> import {} ---- ----\n".format(iName) + iContents + "// <<<< <<<< import {} ---- ----\n\n".format(iName)
                 else:
                     print('ERROR: import "{}" does not exist\n  expected to be {}, located in {})'.format(iName, iFile, root))
                     return None
         elif matchSkip is not None:
             iName = matchImport.group(1)
             if (iName not in alreadyImported): alreadyImported.append(iName)
-        else:
+        elif len(line) > 0:
             line = processTypeDefs(line)
             if line is not None: contents += line + '\n'
             else: return None

@@ -2,7 +2,8 @@
 @import lib.gyroRPY
 
 public class wGyroArr {
-    public MatrixD anchor;
+    private Func<MatrixD> getAnchor;
+    public MatrixD anchor { get { return getAnchor(); } }
     public Dictionary<align, List<IMyGyro>> gMap;
     public int count { get {
         var res = 0;
@@ -12,20 +13,36 @@ public class wGyroArr {
     public IEnumerable<IMyGyro> gyros { get {
         return gMap.Values.Cast<IEnumerable<IMyGyro>>().Aggregate((acc, next) => acc.Concat(next));
     } }
-    public wGyroArr(IEnumerable<IMyGyro> gyros, MatrixD? anchor = null) {
-        this.anchor = anchor != null ? anchor.Value : gyros.FirstOrDefault().CubeGrid.WorldMatrix;
+    private void init(IEnumerable<IMyGyro> gyros, Func<MatrixD> aGetter = null) {
         gMap = new Dictionary<align, List<IMyGyro>>();
-        add(gyros);
+        if (aGetter == null) {
+            getAnchor = () => gyros.First().CubeGrid.WorldMatrix;
+            add(gyros);
+            getAnchor = () => this.gyros.First().CubeGrid.WorldMatrix;
+        } else {
+            getAnchor = aGetter;
+            add(gyros);
+        }
     }
-    public wGyroArr(IEnumerable<IMyGyro> gyros, IMyTerminalBlock anchor = null): this(gyros, anchor?.WorldMatrix) {}
+    public wGyroArr(IEnumerable<IMyGyro> gyros) { init(gyros); }
+    public wGyroArr(IEnumerable<IMyGyro> gyros, IMyTerminalBlock anchor) {
+        if (anchor == null) throw new ArgumentNullException("Argument 'anchor' cannot be null");
+        else init(gyros, () => anchor.CubeGrid.WorldMatrix);
+    }
     private static void release(IMyGyro g) { if (g.IsFunctional) g.GyroOverride = false; }
     private static void reset(IMyGyro g) { if (g.IsFunctional) { g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f; }; }
-    public void add(IMyGyro gyro) {
+    public bool add(IMyGyro gyro) {
         var a = align.determine(gyro.WorldMatrix, anchor);
-        if (!gMap.ContainsKey(a)) gMap.Add(a, new List<IMyGyro>{ gyro });
-        else if (!gMap[a].Contains(gyro)) gMap[a].Add(gyro);
+        if (!gMap.ContainsKey(a)) {
+            gMap.Add(a, new List<IMyGyro>{ gyro });
+            return true;
+        } else if (!gMap[a].Contains(gyro)) {
+            gMap[a].Add(gyro);
+            return true;
+        }
+        return false;
     }
-    public void add(IEnumerable<IMyGyro> gyros) { foreach (var g in gyros) add(g); }
+    public int add(IEnumerable<IMyGyro> gyros) => gyros.Select(g => add(g)).Count(r => r);
     public void remove(IMyGyro gyro, bool doRelease = true, bool doReset = true) {
         foreach (var gs in gMap.Values) if (gs.Contains(gyro)) {
             gs.Remove(gyro);
