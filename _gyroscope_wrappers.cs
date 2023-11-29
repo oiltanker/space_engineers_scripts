@@ -86,30 +86,42 @@ public class wGyroArr {
         add(gyros);
     }
     public wGyroArr(IEnumerable<IMyGyro> gyros, IMyTerminalBlock anchor = null): this(gyros, anchor?.WorldMatrix) {}
+    private static void release(IMyGyro g) { if (g.IsFunctional) g.GyroOverride = false; }
+    private static void reset(IMyGyro g) { if (g.IsFunctional) { g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f; }; }
     public void add(IMyGyro gyro) {
         var a = align.determine(gyro.WorldMatrix, anchor);
         if (!gMap.ContainsKey(a)) gMap.Add(a, new List<IMyGyro>{ gyro });
         else if (!gMap[a].Contains(gyro)) gMap[a].Add(gyro);
     }
     public void add(IEnumerable<IMyGyro> gyros) { foreach (var g in gyros) add(g); }
-    public void remove(IMyGyro gyro) {
+    public void remove(IMyGyro gyro, bool doRelease = true, bool doReset = true) {
         foreach (var gs in gMap.Values) if (gs.Contains(gyro)) {
             gs.Remove(gyro);
+            if (doReset) reset(gyro);
+            if (doRelease) release(gyro);
             break;
         }
     }
-    public void remove(IEnumerable<IMyGyro> gyros) { foreach (var g in gyros) remove(g); }
-    public void clean() {
+    public void remove(IEnumerable<IMyGyro> gyros, bool doRelease = true, bool doReset = true) { foreach (var g in gyros) remove(g, doRelease, doReset); }
+    public void clean(bool doRelease = true, bool doReset = true) {
         foreach (var a in gMap.Keys.ToList()) {
-            for (var i = 0; i < gMap[a].Count; i++) if (!gMap[a][i].IsWorking) { gMap[a].RemoveAt(i); i--; }
+            for (var i = 0; i < gMap[a].Count; i++) {
+                var g = gMap[a][i];
+                if (!g.IsWorking) {
+                    gMap[a].RemoveAt(i);
+                    if (doReset) reset(g);
+                    if (doRelease) release(g);
+                    i--;
+                }
+            }
             if (gMap[a].Count <= 0) gMap.Remove(a);
         }
     }
-    public void reset() { foreach (var gs in gMap.Values) gs.ForEach(g => { if (g.IsFunctional) { g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f; }; }); }
+    public void reset() { foreach (var gs in gMap.Values) gs.ForEach(g => reset(g)); }
     public void capture() { foreach (var gs in gMap.Values) gs.ForEach(g => { if (g.IsFunctional) g.GyroOverride = true; }); }
     public void release(bool doReset = true) {
-        foreach (var gs in gMap.Values) gs.ForEach(g => { if (g.IsFunctional) g.GyroOverride = false; });
-        if (doReset) reset();
+        if (doReset) foreach (var gs in gMap.Values) gs.ForEach(g => { reset(g); release(g); }); 
+        else foreach (var gs in gMap.Values) gs.ForEach(g => release(g)); 
     }
     public void setRPY(float roll, float pitch, float yaw) { // setting values & cleaning array
         foreach (var a in gMap.Keys.ToList()) {
@@ -119,7 +131,11 @@ public class wGyroArr {
             for (var i = 0; i < gMap[a].Count; i++) {
                 var g = gMap[a][i];
                 if (g.IsWorking) { g.Roll = gRoll; g.Pitch = gPitch; g.Yaw = gYaw; }
-                else { gMap[a].RemoveAt(i); i--; }
+                else {
+                    gMap[a].RemoveAt(i);
+                    reset(g); release(g);
+                    i--;
+                }
             }
             if (gMap[a].Count <= 0) gMap.Remove(a);
         }
