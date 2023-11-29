@@ -1,6 +1,6 @@
 @import lib.eps
 @import lib.printFull
-@import lib.gyroWrapper
+@import lib.gyroArray
 
 public const double radToDegMul = 180 / Math.PI;
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@cdrive(\s|$)");
