@@ -1,6 +1,7 @@
 @import lib.eps
 @import lib.printFull
 @import lib.gyroArray
+@import lib.activeStabilization
 
 public const double radToDegMul = 180 / Math.PI;
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@cdrive(\s|$)");
@@ -11,53 +12,18 @@ public int state = 0;
 public bool allWorking = false;
 public IMyShipController controller = null;
 public Dictionary<dir, IMyPistonBase> pMap = null;
-public wGyroArr gFirst  = null;
-public wGyroArr gSecond = null;
+public gStableArr gStabilizator = null;
 
 
-public bool checkGyros() {
-    var cRoll = controller.RollIndicator; var cPitch = controller.RotationIndicator.X; var cYaw = controller.RotationIndicator.Y;
-    print($"cRoll: {cRoll.ToString("0.000")}   cPitch: {cPitch.ToString("0.000")}   cYaw: {cYaw.ToString("0.000")}");
-
-    if (gFirst.count + gSecond.count < 2) return true;
-
-    Action<wGyroArr, wGyroArr> transferTo = (from, to) => {
-        int toTransfer = (from.count - to.count) / 2;
-        if (toTransfer > 0) {
-            var gs = from.gyros.Take(toTransfer);
-            from.remove(gs, false, false);
-            to.add(gs);
-        } else {
-            var g = from.gyros.First();
-            from.remove(g);
-        }
-    };
-    if      (gFirst.count  > gSecond.count) transferTo(gFirst,  gSecond);
-    else if (gSecond.count > gFirst.count)  transferTo(gSecond, gFirst);
-
-    gFirst.capture();
-    gSecond.capture();
-
-    var pRoll  = cRoll  < -EPS ? -60f : 60f; var nRoll  = cRoll  > EPS ? 60f : -60f;
-    var pPitch = cPitch < -EPS ? -60f : 60f; var nPitch = cPitch > EPS ? 60f : -60f;
-    var pYaw   = cYaw   < -EPS ? -60f : 60f; var nYaw   = cYaw   > EPS ? 60f : -60f;
-
-    gFirst.setRPY (pRoll, pPitch, pYaw);
-    gSecond.setRPY(nRoll, nPitch, nYaw);
-    return true; // no fail condition
-}
 public void update() {
     var mat = controller.WorldMatrix;
     var vel = controller.GetShipVelocities().LinearVelocity; // vector
     var mov = controller.MoveIndicator;
 
+    print("stabilizing ...");
+    gStabilizator?.update();
+    print("applying forces ...");
     foreach (var p in pMap.Values) p.Enabled = true;
-
-    if (!checkGyros()) {
-        foreach (var p in pMap.Values) p.Velocity = -5f;
-        return;
-    }
-    print("applying forces");
 
     if (Math.Abs(mov.Z) > dEPS) { // override forward-backward
         if (mov.Z > 0d) { pMap[dir.forward ].Velocity = offVel; pMap[dir.backward].Velocity = onVel; }
@@ -92,6 +58,8 @@ public void findDebugLcd(List<IMyTerminalBlock> blocks) {
 }
 
 public void init() {
+    allWorking = false;
+
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
 
@@ -107,18 +75,14 @@ public void init() {
                   .ToList().ForEach(b => pMap.Add(matchDir(b.WorldMatrix.Down, mat), b as IMyPistonBase));
         } catch (Exception e) {
             print("Wrongly built clang drive.");
+            return;
         }
 
-        if (gFirst != null) gFirst.release();
-        if (gSecond != null) gSecond.release();
-        var gyros = blocks.Where(b => b is IMyGyro && b.CubeGrid == Me.CubeGrid && b.IsWorking && tagRegex.IsMatch(b.CustomName)).Select(b => b as IMyGyro).ToList();
-        if (gyros.Count > 0) {
-            int cnt = (gyros.Count % 2 == 0 ? gyros.Count : gyros.Count - 1) / 2;
-            gFirst  = new wGyroArr(gyros.GetRange(0,   cnt), mat);
-            gSecond = new wGyroArr(gyros.GetRange(cnt, cnt), mat);
-        }
+        gStabilizator?.release();
+        var gyros = blocks.Where(b => b is IMyGyro && b.CubeGrid == Me.CubeGrid && b.IsWorking && tagRegex.IsMatch(b.CustomName)).Select(b => b as IMyGyro);
+        if (gyros.Count() > 0) gStabilizator = new gStableArr(gyros, controller);
 
-        blocks.Where(b => b is IMyThrust && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName)).ToList().ForEach(b => (b as IMyThrust).Enabled = false);
+        foreach (var b in blocks.Where(b => b is IMyThrust && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName))) (b as IMyThrust).Enabled = false;
 
         if (pMap.Count == 6) allWorking = true;
     } else print("No main controller.");
@@ -126,10 +90,9 @@ public void init() {
 
 public void shutdown() {
     foreach (var p in pMap.Values) p.Velocity = -5f;
-    gFirst.release();
-    gSecond.release();
+    gStabilizator?.release();
 
-    pMap = null; controller = null; gFirst = null; gSecond = null;
+    pMap = null; controller = null; gStabilizator = null;
     allWorking = false;
 }
 
@@ -157,15 +120,15 @@ public void Main(string argument, UpdateType updateSource) {
             if (allWorking) {
                 wipe();
                 update();
-            }
-            
+            } else shutdown();
         }
     } else {
-        if (argument == "start") {
-            if (!allWorking) init();
+        if (argument == "start" && state != 1) {
             state = 1;
+            init();
+            if (!allWorking) shutdown();
         } else if (argument == "stop" && state > 0) {
-            if (allWorking) shutdown();
+            shutdown();
             state = 0;
         }
     }
