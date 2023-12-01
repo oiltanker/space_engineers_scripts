@@ -1,6 +1,5 @@
 @import lib.eps
 @import lib.printFull
-@import lib.gyroArray
 @import lib.activeStabilization
 
 public const double radToDegMul = 180 / Math.PI;
@@ -32,6 +31,7 @@ public void update() {
         if (vel.Dot(mat.Forward)  > 0d) { pMap[dir.forward ].Velocity = offVel; pMap[dir.backward].Velocity = onVel; }
         if (vel.Dot(mat.Backward) > 0d) { pMap[dir.backward].Velocity = offVel; pMap[dir.forward ].Velocity = onVel; }
     } else { pMap[dir.forward ].Velocity = offVel; pMap[dir.backward].Velocity = offVel; }
+
     if (Math.Abs(mov.X) > dEPS) { // override left-right
         if (mov.X > 0d) { pMap[dir.left    ].Velocity = offVel; pMap[dir.right   ].Velocity = onVel; }
         if (mov.X < 0d) { pMap[dir.right   ].Velocity = offVel; pMap[dir.left    ].Velocity = onVel; }
@@ -39,6 +39,7 @@ public void update() {
         if (vel.Dot(mat.Left)     > 0d) { pMap[dir.left    ].Velocity = offVel; pMap[dir.right   ].Velocity = onVel; }
         if (vel.Dot(mat.Right)    > 0d) { pMap[dir.right   ].Velocity = offVel; pMap[dir.left    ].Velocity = onVel; }
     } else { pMap[dir.left    ].Velocity = offVel; pMap[dir.right   ].Velocity = offVel; }
+
     if (Math.Abs(mov.Y) > dEPS) { // override up-down
         if (mov.Y < 0d) { pMap[dir.up      ].Velocity = offVel; pMap[dir.down    ].Velocity = onVel; }
         if (mov.Y > 0d) { pMap[dir.down    ].Velocity = offVel; pMap[dir.up      ].Velocity = onVel; }

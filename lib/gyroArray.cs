@@ -27,7 +27,7 @@ public class wGyroArr {
     public wGyroArr(IEnumerable<IMyGyro> gyros) { init(gyros); }
     public wGyroArr(IEnumerable<IMyGyro> gyros, IMyTerminalBlock anchor) {
         if (anchor == null) throw new ArgumentNullException("Argument 'anchor' cannot be null");
-        else init(gyros, () => anchor.CubeGrid.WorldMatrix);
+        else init(gyros, () => anchor.WorldMatrix);
     }
     private static void release(IMyGyro g) { if (g.IsFunctional) g.GyroOverride = false; }
     private static void reset(IMyGyro g) { if (g.IsFunctional) { g.Roll = 0f; g.Pitch = 0f; g.Yaw = 0f; }; }

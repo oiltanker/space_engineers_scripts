@@ -35,7 +35,7 @@ public class gStableArr {
         }
         balance();
 
-        var cRoll = -controller.RollIndicator; var cPitch = controller.RotationIndicator.X; var cYaw = -controller.RotationIndicator.Y;
+        var cRoll = controller.RollIndicator; var cPitch = controller.RotationIndicator.X; var cYaw = controller.RotationIndicator.Y;
         var pRoll  = cRoll  < -EPS ? -60f : 60f; var nRoll  = cRoll  > EPS ? 60f : -60f;
         var pPitch = cPitch < -EPS ? -60f : 60f; var nPitch = cPitch > EPS ? 60f : -60f;
         var pYaw   = cYaw   < -EPS ? -60f : 60f; var nYaw   = cYaw   > EPS ? 60f : -60f;

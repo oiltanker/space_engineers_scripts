@@ -1,3 +1,5 @@
+@import lib.printFull
+
 public const float TIME_CLOSE_MS = 2000f;
 
 public bool active = true;
@@ -20,10 +22,6 @@ public class airlock {
 }
 public List<airlock> airlocks = null;
 public Dictionary<IMyDoor, float> doorsToClose = new Dictionary<IMyDoor, float>();
-public IMyTextSurface mySurface = null;
-
-public void print(string str) => mySurface.WriteText(str + "\n", true);
-public void wipe() => mySurface.WriteText("", false);
 
 public string serialize() {
     string str = active.ToString();
@@ -53,8 +51,7 @@ public Program() {
     Echo("");
     if (!string.IsNullOrEmpty(Storage)) deserialize(Storage);
 
-    mySurface = Me.GetSurface(0);
-    mySurface.ContentType = ContentType.TEXT_AND_IMAGE;
+    initMeLcd();
     wipe();
     print("Door closing initialized.\n    start - starts the process\n    stop - stops the script");
     if (active) {
