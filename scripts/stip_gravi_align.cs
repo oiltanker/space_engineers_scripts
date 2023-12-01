@@ -17,7 +17,7 @@ public static string prettyV3(Vector3D v) {
     return "< " + v.X.ToString("0.000") + ", " + v.Y.ToString("0.000") + ", " + v.Z.ToString("0.000");
 }
 
-public static pidCtrl newDefaultPid() => new pidCtrl(5d, 0.25d, 1d, 1d / ENG_UPS, 0.95d);
+public static pidCtrl newDefaultPid() => new pidCtrl(5d, 0.1d, 1d, 1d / ENG_UPS, 0.95d);
 public class gyroCtrl {
     public pidCtrl ctrlRoll;
     public pidCtrl ctrlPitch;
@@ -83,6 +83,9 @@ public class gyroCtrl {
         var cYaw = Math.Sign(lyVec.Z) * Math.Acos(-lyVec.X / Math.Sqrt(lyVec.X*lyVec.X + lyVec.Z*lyVec.Z)) * radToDegMul * 2;
         print($"yawVec: {prettyV3(yawVec)}    lyVec: {prettyV3(lyVec)}");
         print($"cRoll: {cRoll.ToString("0.000")}    cPitch: {cPitch.ToString("0.000")}    cYaw: {cYaw.ToString("0.000")}");
+        cRoll  = cRoll  * Math.Min(Math.Abs(cRoll)  / 5d, 1d);
+        cPitch = cPitch * Math.Min(Math.Abs(cPitch) / 5d, 1d);
+        cYaw   = cYaw   * Math.Min(Math.Abs(cYaw)   / 5d, 1d);
         cRoll  =  ctrlRoll.control(-cRoll,  delta);
         cPitch = ctrlPitch.control( cPitch, delta);
         cYaw   =   ctrlYaw.control(-cYaw,   delta);
