@@ -23,3 +23,13 @@ public static dir matchDir(Vector3D dV, MatrixD anchor) {
     else if ((dV -     anchor.Down).Length() < dEPS) return dir.down;
     else throw new ArgumentException("Wrong anchor matrix.");
 }
+public static dir matchDirClosest(Vector3D dV, MatrixD anchor) {
+    dir res = dir.forward; double diff = Double.MaxValue; double cDif = 0d;
+    cDif = (dV -  anchor.Forward).Length(); if (cDif < diff) { diff = cDif; res = dir.forward; }
+    cDif = (dV - anchor.Backward).Length(); if (cDif < diff) { diff = cDif; res = dir.backward; }
+    cDif = (dV -     anchor.Left).Length(); if (cDif < diff) { diff = cDif; res = dir.left; }
+    cDif = (dV -    anchor.Right).Length(); if (cDif < diff) { diff = cDif; res = dir.right; }
+    cDif = (dV -       anchor.Up).Length(); if (cDif < diff) { diff = cDif; res = dir.up; }
+    cDif = (dV -     anchor.Down).Length(); if (cDif < diff) { diff = cDif; res = dir.down; }
+    return res;
+}

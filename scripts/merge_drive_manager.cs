@@ -5,6 +5,7 @@
 public const double radToDegMul = 180 / Math.PI;
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@mdrive(\s|$)");
 public const float pVel = 5f;
+public const double maxSpeed = 260d;
 
 public enum force { none, positive, negative }
 public enum aState { unasigned, begin, end, extending, retracting }
@@ -34,7 +35,6 @@ public class aPump {
     public void applyForce(force forceMode, float scale) {
         arm1.update();
         arm2.update();
-        print($"state1: {arm1.state.ToString("G")}    state2: {arm2.state.ToString("G")}");
 
         if (arm1.state == aState.unasigned || arm2.state == aState.unasigned) {
             setEnabled(false, false);
@@ -87,19 +87,21 @@ public void setAccelMul(int _speed) {
     accelMul = (float) speed / 100f * maxMul;
 }
 
-public void decide(Vector3D vel, double move, Vector3D direction, dir normal, dir reverse) {
+public void decide(Vector3D vel, double move, Vector3D direction, dir normal, dir reverse, double maxSpeed) {
     var dirVel = vel.Dot(direction);
     var velMag = Math.Abs(dirVel);
+    var velMul = Math.Min((float) (maxSpeed - velMag) / 10f, 1f);
     var mul = Math.Min((float) velMag / 10f, 1f) * maxMul;
+    print($" - achieving {normal.ToString("G")} speed of {(Math.Sign(dirVel) * maxSpeed).ToString("0.00")}");
     if (Math.Abs(move) > dEPS) { // override forward-backward
         if        (move > 0d) {
-            var scale = dirVel < 0d ? accelMul : mul;
-            if      (aMap.ContainsKey(normal )) aMap[normal ].applyForce(force.negative, scale);
-            else if (aMap.ContainsKey(reverse)) aMap[reverse].applyForce(force.positive, scale);
+            var scale = dirVel < 0d && velMul > 0f ? accelMul * velMul : mul;
+            if      (aMap.ContainsKey(normal )) aMap[normal ].applyForce(velMul > 0f ? force.negative : force.positive, scale);
+            else if (aMap.ContainsKey(reverse)) aMap[reverse].applyForce(velMul > 0f ? force.positive : force.negative, scale);
         } else if (move < 0d) {
-            var scale = dirVel > 0d ? accelMul : mul;
-            if      (aMap.ContainsKey(normal )) aMap[normal ].applyForce(force.positive, scale);
-            else if (aMap.ContainsKey(reverse)) aMap[reverse].applyForce(force.negative, scale);
+            var scale = dirVel > 0d && velMul > 0f ? accelMul * velMul : mul;
+            if      (aMap.ContainsKey(normal )) aMap[normal ].applyForce(velMul > 0f ? force.positive : force.negative, scale);
+            else if (aMap.ContainsKey(reverse)) aMap[reverse].applyForce(velMul > 0f ? force.negative : force.positive, scale);
         }
     } else if (controller.DampenersOverride && velMag > 0.5d) { // dampening forward-backward
         if        (vel.Dot(direction) > 0d) {
@@ -125,9 +127,10 @@ public void update() {
     gStabilizator?.update();
     print("applying forces ...");
 
-    decide(vel,  mov.Z, mat.Forward, dir.forward, dir.backward);
-    decide(vel,  mov.X, mat.Left,    dir.left,    dir.right);
-    decide(vel, -mov.Y, mat.Up,      dir.up,      dir.down);
+    var nMaxSpeed = maxSpeed / (double) Math.Max(mov.Length(), 1f);
+    decide(vel,  mov.Z, mat.Forward, dir.forward, dir.backward, nMaxSpeed);
+    decide(vel,  mov.X, mat.Left,    dir.left,    dir.right,    nMaxSpeed);
+    decide(vel, -mov.Y, mat.Up,      dir.up,      dir.down,     nMaxSpeed);
 }
 
 public void findDebugLcd(List<IMyTerminalBlock> blocks) {
@@ -153,7 +156,7 @@ public void init() {
 
         try {
             aMap = new Dictionary<dir, aPump>();
-            foreach (var ap in blocks.Where(b => b is IMyPistonBase && b.IsSameConstructAs(Me) && b.IsFunctional && tagRegex.IsMatch(b.CustomName)).Cast<IMyPistonBase>().GroupBy(p => matchDir(p.WorldMatrix.Down, mat))) {
+            foreach (var ap in blocks.Where(b => b is IMyPistonBase && b.IsSameConstructAs(Me) && b.IsFunctional && tagRegex.IsMatch(b.CustomName)).Cast<IMyPistonBase>().GroupBy(p => matchDirClosest(p.WorldMatrix.Down, mat))) {
                 var piston1 = ap.AsEnumerable().First(); var piston2 = ap.AsEnumerable().Skip(1).First();
                 aMap.Add(ap.Key, new aPump(
                     new arm(piston1, blocks.Where(b => b is IMyShipMergeBlock && b.CubeGrid == piston1.TopGrid && b.IsFunctional).Cast<IMyShipMergeBlock>().ToList()),
@@ -161,7 +164,7 @@ public void init() {
                 ));
             }
         } catch (Exception e) {
-            print("Wrongly built merge drive.");
+            print($"Wrongly built merge drive: could not evaluate components\n{e.Message}");
             return;
         }
 
@@ -175,8 +178,9 @@ public void init() {
             (aMap.ContainsKey(dir.forward) != aMap.ContainsKey(dir.backward)) &&
             (aMap.ContainsKey(dir.left) != aMap.ContainsKey(dir.right)) &&
             (aMap.ContainsKey(dir.up) != aMap.ContainsKey(dir.down))
-        ) allWorking = true;
-    } else print("No main controller.");
+        ) { allWorking = true; Echo($"speed\n{speed}"); }
+        else { print("Wrongly built merge drive: wrong components"); Echo("error"); }
+    } else { print("No main controller."); Echo("error"); }
 }
 
 public void shutdown() {
@@ -210,9 +214,9 @@ public Program() {
         var blocks = new List<IMyTerminalBlock>();
         GridTerminalSystem.GetBlocks(blocks);
         findDebugLcd(blocks);
+        Echo("offline");
         wipe();
         print("Merge drive shut down.");
-        Echo("offline");
     }
 }
 
@@ -244,8 +248,8 @@ public void Main(string argument, UpdateType updateSource) {
             shutdown();
             state = 0;
             Runtime.UpdateFrequency = UpdateFrequency.None;
-            wipe();
             Echo("offline");
+            wipe();
             print("Merge drive shut down.");
         } else if (speedCmd.IsMatch(argument)) {
             var match = speedCmd.Match(argument);
