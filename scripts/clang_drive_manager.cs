@@ -49,22 +49,13 @@ public void update() {
     } else { pMap[dir.up      ].Velocity = offVel; pMap[dir.down    ].Velocity = offVel; }
 }
 
-public void findDebugLcd(List<IMyTerminalBlock> blocks) {
-    debugLcd = blocks.FirstOrDefault(b => b is IMyTextPanel && tagRegex.IsMatch(b.CustomName) && b.IsSameConstructAs(Me)) as IMyTextPanel;
-    if (debugLcd != null) {
-        debugLcd.ContentType = ContentType.TEXT_AND_IMAGE;
-        debugLcd.FontSize = 0.8f;
-        debugLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-    }
-}
-
 public void init() {
     allWorking = false;
 
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
 
-    findDebugLcd(blocks);
+    findDebugLcd(blocks, tagRegex);
     wipe();
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {

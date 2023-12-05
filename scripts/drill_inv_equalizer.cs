@@ -1,12 +1,7 @@
-public const double dEPS = 0.001d;
-public const float EPS = 0.01f;
-public const int ENG_UPS = 60;
-public const double radToDegMul = 180 / Math.PI;
+@import lib.eps
+@import lib.printFull
 
-public static IMyTextPanel textPanel = null;
-public static void wipe() { if (textPanel != null) textPanel.WriteText(""); }
-public static void print(string str) { if (textPanel != null) textPanel.WriteText(str + '\n', true); }
-
+public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@drill_inv_eq(\s|$)");
 public int state = 0;
 public List<IMyShipDrill> drills = null;
 
@@ -49,23 +44,14 @@ public void init() {
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
 
-    findPanel(blocks);
+    findDebugLcd(blocks, tagRegex);
     drills = blocks.Where(b => b is IMyShipDrill && b.IsSameConstructAs(Me)).Select(b => b as IMyShipDrill).ToList();
-}
-
-public static readonly System.Text.RegularExpressions.Regex tagRegex = new System.Text.RegularExpressions.Regex(@"(\s|^)@drill_inv_eq(\s|$)");
-public void findPanel(List<IMyTerminalBlock> blocks) {
-    textPanel = blocks.FirstOrDefault(b => b is IMyTextPanel && b.IsWorking && b.IsSameConstructAs(Me) && tagRegex.IsMatch(b.CustomName)) as IMyTextPanel;
-    if (textPanel != null) {
-        textPanel.ContentType = ContentType.TEXT_AND_IMAGE;
-        textPanel.FontSize = 0.8f;
-        textPanel.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-    }
 }
 
 public Program() {
     Echo("");
     Me.CustomName = "@drill_inv_eq program";
+    initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);
     Runtime.UpdateFrequency = UpdateFrequency.Update10;

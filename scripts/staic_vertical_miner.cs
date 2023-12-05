@@ -13,6 +13,7 @@
  *   start - starts mining process
  *   stop  - stops mining process
  */
+@import lib.printFull
 
 public const float EPS = 0.1f;
 
@@ -199,18 +200,9 @@ public class MineWalker {
 }
 MineWalker mineState = null;
 
-public void findPanel() {
-    if (textPanel == null) {
-        textPanel = gridTerminalSystem.GetBlockWithName("[MINE Panel]") as IMyTextPanel;
-        if (textPanel != null) {
-            textPanel.ContentType = ContentType.TEXT_AND_IMAGE;
-            textPanel.FontSize = 1f;
-            textPanel.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-        }
-    }
-}
-
 public Program() {
+    initMeLcd();
+
     runtime = Runtime;
     gridTerminalSystem = GridTerminalSystem;
 
@@ -219,14 +211,6 @@ public Program() {
     myLcd.FontSize = 1;
     myLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
 
-    wipe = () => {
-        myLcd.WriteText("");
-        if (textPanel != null) textPanel.WriteText("");
-    };
-    print = (str) => {
-        myLcd.WriteText(str + '\n', true);
-        if (textPanel != null) textPanel.WriteText(str + '\n', true);
-    };
     print("Initializing ...");
 
     mineState = new MineWalker(Storage);
@@ -239,7 +223,9 @@ public void Save() {
 
 public void Main(string argument, UpdateType updateSource) {
     if (updateSource == UpdateType.Update10 || updateSource == UpdateType.Update100) {
-        findPanel();
+        var blocks = new List<IMyTerminalBlock>();
+        GridTerminalSystem.GetBlocks(blocks);
+        findDebugLcd(blocks, new @Regex("(\s|^)[MINE Panel](\s|$)"));
         if (mineState != null) mineState.update();
     }
     else mineState.act(argument);

@@ -7,18 +7,13 @@
  *   start - starts
  *   stop  - stops
  */
+@import lib.printFull
 
 public const double dEPS = 0.001d;
 public const float EPS = 0.05f;
 
-private static readonly System.Text.RegularExpressions.Regex tagEndRegex = new System.Text.RegularExpressions.Regex(@"(\s|^)@walker-end(\s|$)");
-private static readonly System.Text.RegularExpressions.Regex tagRegex = new System.Text.RegularExpressions.Regex(@"(\s|^)@walker(-(head|tail))?(\s|$)");
-public static IMyTextPanel debugLcd = null;
-public static void wipe() { if (debugLcd != null) debugLcd.WriteText(""); }
-public static void print(string str = "") { if (debugLcd != null) debugLcd.WriteText(str + '\n', true); }
-public static string prettyV3(Vector3D v) {
-    return "< " + v.X.ToString("0.000") + ", " + v.Y.ToString("0.000") + ", " + v.Z.ToString("0.000");
-}
+private static readonly @Regex tagEndRegex = new @Regex(@"(\s|^)@walker-end(\s|$)");
+private static readonly @Regex tagRegex = new @Regex(@"(\s|^)@walker(-(head|tail))?(\s|$)");
 
 
 public class walker {
@@ -177,31 +172,22 @@ public class walker {
 }
 walker walkerO = null;
 
-public void findPanel(List<IMyTerminalBlock> blocks) {
-    if (debugLcd == null || !debugLcd.IsWorking) {
-        debugLcd = blocks.FirstOrDefault(b => b is IMyTextPanel && tagRegex.IsMatch(b.CustomName)) as IMyTextPanel;
-        if (debugLcd != null) {
-            debugLcd.ContentType = ContentType.TEXT_AND_IMAGE;
-            debugLcd.FontSize = 0.8f;
-            debugLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-        }
-    }
-}
-
 public void init() {
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
 
-    findPanel(blocks);
+    findDebugLcd(blocks, tagRegex);
     walkerO = new walker(blocks);
 }
 
 public static int state = 0;
 public Program() {
     Echo("");
+    Me.CustomName = "@walker program";
+    initMeLcd();
+
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);
     Runtime.UpdateFrequency = UpdateFrequency.Update1;
-    Me.CustomName = "@walker program";
     if (state == 1) init();
 }
 

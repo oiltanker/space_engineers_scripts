@@ -16,3 +16,14 @@ public void initMeLcd(float fontSize = 1f) {
         myLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
     }
 }
+
+public void findDebugLcd(List<IMyTerminalBlock> blocks, @Regex tagRegex, float fontSize = 0.8f) {
+    if (debugLcd == null || !debugLcd.IsWorking) {
+        debugLcd = blocks.FirstOrDefault(b => b is IMyTextPanel && tagRegex.IsMatch(b.CustomName)) as IMyTextPanel;
+        if (debugLcd != null) {
+            debugLcd.ContentType = ContentType.TEXT_AND_IMAGE;
+            debugLcd.FontSize = fontSize;
+            debugLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
+        }
+    }
+}

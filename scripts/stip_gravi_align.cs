@@ -127,14 +127,7 @@ public static readonly @Regex slaveTagRegex = new @Regex(@"(\s|^)@galign-slave(\
 public void collectSlaveControllers(List<IMyTerminalBlock> blocks) {
     slaveControllers = blocks.Where(b => b is IMyShipController && b.IsSameConstructAs(controller) && slaveTagRegex.IsMatch(b.CustomName)).Select(b => b as IMyShipController).ToList();
 }
-public void findDebugLcd(List<IMyTerminalBlock> blocks) {
-    debugLcd = blocks.FirstOrDefault(b => b is IMyTextPanel && tagRegex.IsMatch(b.CustomName)&& b.CubeGrid == controller.CubeGrid) as IMyTextPanel;
-    if (debugLcd != null) {
-        debugLcd.ContentType = ContentType.TEXT_AND_IMAGE;
-        debugLcd.FontSize = 0.8f;
-        debugLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-    }
-}
+
 public void init() {
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
@@ -142,12 +135,13 @@ public void init() {
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {
         collectSlaveControllers(blocks);
-        findDebugLcd(blocks);
+        findDebugLcd(blocks, tagRegex);
         gCtrl = new gyroCtrl(controller, slaveControllers, getConnectedGyros(blocks, true));
     }
 }
+
 public void stateUpdate() {
-    if (controller.Closed) {
+    if (controller == null || controller.Closed) {
         init();
         return;
     }
@@ -156,7 +150,7 @@ public void stateUpdate() {
     GridTerminalSystem.GetBlocks(blocks);
 
     collectSlaveControllers(blocks);
-    findDebugLcd(blocks);
+    findDebugLcd(blocks, tagRegex);
     gCtrl.updateGyros(getConnectedGyros(blocks, true));
 }
 

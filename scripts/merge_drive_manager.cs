@@ -133,22 +133,13 @@ public void update() {
     decide(vel, -mov.Y, mat.Up,      dir.up,      dir.down,     nMaxSpeed);
 }
 
-public void findDebugLcd(List<IMyTerminalBlock> blocks) {
-    debugLcd = blocks.FirstOrDefault(b => b is IMyTextPanel && tagRegex.IsMatch(b.CustomName) && b.IsSameConstructAs(Me)) as IMyTextPanel;
-    if (debugLcd != null) {
-        debugLcd.ContentType = ContentType.TEXT_AND_IMAGE;
-        debugLcd.FontSize = 0.8f;
-        debugLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-    }
-}
-
 public void init() {
     allWorking = false;
 
     var blocks = new List<IMyTerminalBlock>();
     GridTerminalSystem.GetBlocks(blocks);
 
-    findDebugLcd(blocks);
+    findDebugLcd(blocks, tagRegex);
     wipe();
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {
@@ -213,7 +204,7 @@ public Program() {
     } else {
         var blocks = new List<IMyTerminalBlock>();
         GridTerminalSystem.GetBlocks(blocks);
-        findDebugLcd(blocks);
+        findDebugLcd(blocks, tagRegex);
         Echo("offline");
         wipe();
         print("Merge drive shut down.");

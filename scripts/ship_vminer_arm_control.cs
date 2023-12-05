@@ -1,9 +1,5 @@
-public const double dEPS = 0.001d;
-public const float EPS = 0.01f;
-
-public static IMyTextPanel debugLcd = null;
-public static void wipe() { if (debugLcd != null) debugLcd.WriteText(""); }
-public static void print(string str) { if (debugLcd != null) debugLcd.WriteText(str + '\n', true); }
+@import lib.eps
+@import lib.printFull
 
 public int state = 0;
 public IMyShipController controller = null;
@@ -15,12 +11,7 @@ public void init() {
 
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {
-        debugLcd = blocks.FirstOrDefault(b => b is IMyTextPanel && tagRegex.IsMatch(b.CustomName)&& b.CubeGrid == controller.CubeGrid) as IMyTextPanel;
-        if (debugLcd != null) {
-            debugLcd.ContentType = ContentType.TEXT_AND_IMAGE;
-            debugLcd.FontSize = 0.8f;
-            debugLcd.Alignment = VRage.Game.GUI.TextPanel.TextAlignment.LEFT;
-        }
+        findDebugLcd(blocks, tagRegex);
         handJoint = blocks.FirstOrDefault(b => b is IMyMotorAdvancedStator && tagRegex.IsMatch(b.CustomName)) as IMyMotorAdvancedStator;
     }
 }
@@ -28,6 +19,8 @@ public void init() {
 public Program() {
     Echo("");
     Me.CustomName = "@vminer program";
+    initMeLcd();
+
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);
     Runtime.UpdateFrequency = UpdateFrequency.Update1;
     init();
