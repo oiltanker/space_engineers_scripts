@@ -16,17 +16,18 @@ public class pistonGyroArr {
     public pistonGyroArr(Dictionary<dir, IMyPistonBase> pistons, IMyTerminalBlock anchor) {
         rollPid = newDefaultPid(); pitchPid = newDefaultPid(); yawPid = newDefaultPid();
         pMap = pistons;
+        foreach (var p in pMap.Values) if (p != null && p.IsFunctional) p.MaxLimit = 6f;
     }
     private void setVel(IMyPistonBase piston, float val, double vel) {
         if (val > 0f) {
-            piston.MinLimit = Math.Max(7f - (val / 20f), 5f);
+            piston.MinLimit = Math.Max(6f - (val / 20f), 2.5f);
             if (piston.CurrentPosition > piston.MinLimit) piston.Velocity = -5f;
             else piston.Velocity = 5f;
         } else if (Math.Abs(val) < dEPS && vel > 0d) {
-            piston.MinLimit = Math.Max(7f - (float) vel, 5f);
+            piston.MinLimit = Math.Max(6f - (float) vel, 2.5f);
             if (piston.CurrentPosition > piston.MinLimit) piston.Velocity = -5f;
             else piston.Velocity = 5f;
-        } else { piston.Velocity = 5f; piston.MinLimit = 5f; }
+        } else { piston.Velocity = 5f; piston.MinLimit = 2.5f; }
     }
     public void update(float roll, float pitch, float yaw, Vector3D rotVel, double delta) {
         roll  *= -10f;
@@ -43,7 +44,7 @@ public class pistonGyroArr {
         setVel(pMap[dir.down],      yaw,   -rotVel.Y);
     }
     public void shutdown() {
-        foreach (var p in pMap.Values) if (p != null && p.IsFunctional) { p.Velocity = -5f; p.MinLimit = 2.5f; }
+        foreach (var p in pMap.Values) if (p != null && p.IsFunctional) { p.Velocity = -5f; p.MinLimit = 0f; }
     }
 }
 
