@@ -155,7 +155,7 @@ public void init() {
                 ));
             }
         } catch (Exception e) {
-            print($"Wrongly built merge drive: could not evaluate components\n{e.Message}");
+            print($"Wrongly built merge drive: could not evaluate components\n{e.Message}"); Echo("error");
             return;
         }
 
