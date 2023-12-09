@@ -1,8 +1,9 @@
 @import lib.printFull
 
+const string pName = "@test program";
 public Program() {
     Echo("");
-    Me.CustomName = "@test program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 }
 

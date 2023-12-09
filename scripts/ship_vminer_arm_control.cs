@@ -16,9 +16,10 @@ public void init() {
     }
 }
 
+const string pName = "@vminer program";
 public Program() {
     Echo("");
-    Me.CustomName = "@vminer program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);

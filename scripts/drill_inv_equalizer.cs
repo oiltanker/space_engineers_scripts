@@ -48,9 +48,10 @@ public void init() {
     drills = blocks.Where(b => b is IMyShipDrill && b.IsSameConstructAs(Me)).Select(b => b as IMyShipDrill).ToList();
 }
 
+const string pName = "@drill_inv_eq program";
 public Program() {
     Echo("");
-    Me.CustomName = "@drill_inv_eq program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);

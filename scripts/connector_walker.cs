@@ -181,9 +181,11 @@ public void init() {
 }
 
 public static int state = 0;
+
+const string pName = "@walker program";
 public Program() {
     Echo("");
-    Me.CustomName = "@walker program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);

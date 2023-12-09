@@ -95,9 +95,14 @@ public class vtolMgr {
             }
         });
     }
-    public void update(Vector3D gVec, bool dampening, Vector3D vel, Vector3 mov, double mass, double delta) {
+    public void update(Vector3D gVec, bool dampening, Vector3D vel, Vector3 mov, double mass, double delta, bool docked) {
         print($"mov: {mov.X.ToString("0")}, {mov.Y.ToString("0")}, {mov.Z.ToString("0")}");
         vtols.ForEach(v => v.update(gVec));
+
+        if (docked) {
+            thrusters.ForEach(t => t.ThrustOverride = EPS);
+            return;
+        }
 
         if (dampening) {
             if (vel.Length() < 0.5d && stopPoint != null) {
@@ -138,6 +143,8 @@ public pidCtrl pidRoll = null;
 public pidCtrl pidPitch = null;
 public pidCtrl pidYaw = null;
 public pidCtrl velPid = new pidCtrl(1d, 10d, 0.5d, 1d / ENG_UPS, 0.95d);
+public List<IMyShipConnector> connectors = null;
+public List<IMyLandingGear> landingGear = null;
 
 public void update(double delta) {
     var gVec = controller.GetNaturalGravity();
@@ -145,7 +152,8 @@ public void update(double delta) {
     print($"gForce: {gVec.Length().ToString("0.000")}");
     print($"gVec: {gVec.X.ToString("0.000")}, {gVec.Y.ToString("0.000")}, {gVec.Z.ToString("0.000")}");
 
-    vtolManager.update(gVec, controller.DampenersOverride, vels.LinearVelocity, controller.MoveIndicator, controller.CalculateShipMass().PhysicalMass, delta);
+    vtolManager.update(gVec, controller.DampenersOverride, vels.LinearVelocity, controller.MoveIndicator, controller.CalculateShipMass().PhysicalMass, delta,
+        connectors.Any(c => c.IsConnected) || landingGear.Any(l => l.IsLocked));
     if (gyroArray != null) {
         var mat = controller.WorldMatrix;
         var fVec = mat.Forward; var lVec = mat.Left; var uVec = mat.Up;
@@ -190,6 +198,9 @@ public void init() {
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {
         try {
+            connectors = blocks.Where(b => b is IMyShipConnector && b.IsSameConstructAs(Me)).Cast<IMyShipConnector>().ToList();
+            landingGear = blocks.Where(b => b is IMyLandingGear && b.IsSameConstructAs(Me)).Cast<IMyLandingGear>().ToList();
+
             vtolManager?.shutdown();
             var rotors = blocks.Where(b => b is IMyMotorStator && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName)).Cast<IMyMotorStator>();
             if (rotors.Count() > 0) vtolManager = new vtolMgr(rotors, controller, velPid, blocks);
@@ -218,9 +229,10 @@ public void shutdown() {
     allWorking = false;
 }
 
+const string pName = "@vtol program";
 public Program() {
     Echo("");
-    Me.CustomName = "@vtol program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);

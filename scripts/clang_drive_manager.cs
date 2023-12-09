@@ -88,9 +88,10 @@ public void shutdown() {
     allWorking = false;
 }
 
+const string pName = "@cdrive program";
 public Program() {
     Echo("");
-    Me.CustomName = "@cdrive program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);

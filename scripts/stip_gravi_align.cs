@@ -154,9 +154,10 @@ public void stateUpdate() {
     gCtrl.updateGyros(getConnectedGyros(blocks, true));
 }
 
+const string pName = "@galign program";
 public Program() {
     Echo("");
-    Me.CustomName = "@galign program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);
     Runtime.UpdateFrequency = UpdateFrequency.Update1;

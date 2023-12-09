@@ -4,7 +4,7 @@
 @import lib.angularVelocity
 @import lib.pid
 
-public const double radToDegMul = 180 / Math.PI;
+// public const double radToDegMul = 180 / Math.PI;
 public const string itProperty = "ShareInertiaTensor";
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@cgyro(\s|$)");
 public static readonly @Regex tagPistons = new @Regex(@"(\s|^)@cgyro-(f|b)-(roll|pitch|yaw)(\s|$)");
@@ -114,7 +114,7 @@ public bool init() {
 
             pgArr = new pistonGyroArr(pMap, controller);
         } catch (Exception e) {
-            print($"Wrongly clang gyroscope: could not evaluate components\n{e.Message}"); Echo("error");
+            print($"Wrongly built clang gyroscope: could not evaluate components\n{e.Message}"); Echo("error");
             return false;
         }
 
@@ -138,9 +138,10 @@ public void shutdown() {
     pgArr = null;
 }
 
+const string pName = "@cgyro program";
 public Program() {
     Echo("");
-    Me.CustomName = "@cgyro program";
+    if (!Me.CustomName.StartsWith(pName)) Me.CustomName = pName;
     initMeLcd();
 
     if (!string.IsNullOrEmpty(Storage)) state = int.Parse(Storage);
