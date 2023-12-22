@@ -1,10 +1,11 @@
+@import lib.grid
+
 public Program() {}
 public void Save() {}
 
 public void Main(string argument, UpdateType updateSource) {
-   var blocks = new List<IMyConveyorSorter>();
-   GridTerminalSystem.GetBlocksOfType<IMyConveyorSorter>(blocks, b => b.CubeGrid == Me.CubeGrid);
-   Echo($"Sorters detected: {blocks.Count}");
+   var blocks = getBlocks(b => b is IMyConveyorSorter && b.CubeGrid == Me.CubeGrid).Cast<IMyConveyorSorter>();
+   Echo($"Sorters detected: {blocks.Count()}");
 
    MyInventoryItemFilter stone = new MyInventoryItemFilter("MyObjectBuilder_Ore/Stone", false);
    MyInventoryItemFilter ice = new MyInventoryItemFilter("MyObjectBuilder_Ore/Ice", false);

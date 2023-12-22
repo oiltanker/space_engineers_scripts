@@ -72,6 +72,7 @@ public class wGyroArr {
         if (doReset) foreach (var gs in gMap.Values) gs.ForEach(g => { reset(g); release(g); }); 
         else foreach (var gs in gMap.Values) gs.ForEach(g => release(g)); 
     }
+    public void standby() => setRPY(0f, 0f, 0f);
     public void setRPY(float roll, float pitch, float yaw) { // setting values & cleaning array
         foreach (var a in gMap.Keys.ToList()) {
             var gRoll  = chooseRPY(a, a.forward, roll, pitch, yaw);
@@ -81,8 +82,8 @@ public class wGyroArr {
                 var g = gMap[a][i];
                 if (g.IsWorking) { g.Roll = gRoll; g.Pitch = gPitch; g.Yaw = gYaw; }
                 else {
-                    gMap[a].RemoveAt(i);
                     reset(g); release(g);
+                    gMap[a].RemoveAt(i);
                     i--;
                 }
             }

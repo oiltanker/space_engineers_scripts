@@ -1,10 +1,11 @@
+@import lib.grid
+
 public Program() {
     Echo("");
 }
 
 public void Main(string argument, UpdateType updateSource) {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks();
 
     @Regex tagRegex = new @Regex(@"(.*\s|^)@cdrive(\s.*|$)");
     foreach (var g in blocks.Where(b => b is IMyGyro && b.CubeGrid == Me.CubeGrid && tagRegex.IsMatch(b.CustomName)).Cast<IMyGyro>()) {

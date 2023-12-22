@@ -1,5 +1,6 @@
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 
 public const double radToDegMul = 180 / Math.PI;
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@<tag>(\s|$)");
@@ -12,8 +13,7 @@ public void update() {
 }
 
 public bool init() {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     findDebugLcd(blocks, tagRegex);
     wipe();
@@ -54,10 +54,7 @@ public Program() {
         if (!init()) shutdown();
         Runtime.UpdateFrequency = UpdateFrequency.Update1;
     } else {
-        var blocks = new List<IMyTerminalBlock>();
-        GridTerminalSystem.GetBlocks(blocks);
-        findDebugLcd(blocks, tagRegex);
-
+        findDebugLcd(getBlocks(b => b.IsSameConstructAs(Me)), tagRegex);
         Echo("offline"); wipe(); print("<device_name> shut down");
     }
 }

@@ -1,5 +1,6 @@
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@dock(-(charge|onoff|run|trigger|start|lock))?(\s|$)");
 
@@ -60,7 +61,7 @@ public void update() {
         dockState = newState;
         var succ = actions.Count(a => a.tryAct(newState == 1));
         print($"\n{actions.Count - succ}/{actions.Count} actions failed");
-    } else actions.ForEach(a => print($"{a}"));
+    } //else actions.ForEach(a => print($"{a}"));
 }
 
 public static dAct.aType getAType(@Match match) {
@@ -76,10 +77,7 @@ public static dAct.aType getAType(@Match match) {
     return dAct.aType.onoff;
 }
 public bool init() {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
-    var blockGroups = new List<IMyBlockGroup>();
-    GridTerminalSystem.GetBlockGroups(blockGroups);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     allOk = false;
 
@@ -87,8 +85,8 @@ public bool init() {
     wipe();
 
     try {
-        connectors = blocks.Where(b => b is IMyShipConnector && b.IsSameConstructAs(Me)).Cast<IMyShipConnector>().ToList();
-        landingGear = blocks.Where(b => b is IMyLandingGear && b.IsSameConstructAs(Me)).Cast<IMyLandingGear>().ToList();
+        connectors = blocks.Where(b => b is IMyShipConnector).Cast<IMyShipConnector>().ToList();
+        landingGear = blocks.Where(b => b is IMyLandingGear).Cast<IMyLandingGear>().ToList();
         actions = new List<dAct>();
         var added = new List<IMyTerminalBlock>();
         foreach (var b in blocks) {
@@ -100,13 +98,11 @@ public bool init() {
                 actions.Add(new dAct(getAType(match), b));
             }
         }
-        foreach (var bg in blockGroups) {
+        foreach (var bg in getGroups()) {
             var match = tagRegex.Match(bg.Name);
             if (match.Success) {
                 var type = getAType(match);
-                var bs = new List<IMyTerminalBlock>();
-                bg.GetBlocks(bs);
-                foreach (var b in bs) {
+                foreach (var b in getGroupBlocks(bg, b => b.IsSameConstructAs(Me))) {
                     if (!added.Contains(b)) {
                         added.Add(b);
                         actions.Add(new dAct(type, b));
@@ -156,9 +152,7 @@ public Program() {
         if (!init()) shutdown();
         Runtime.UpdateFrequency = UpdateFrequency.Update10;
     } else {
-        var blocks = new List<IMyTerminalBlock>();
-        GridTerminalSystem.GetBlocks(blocks);
-        findDebugLcd(blocks, tagRegex);
+        findDebugLcd(getBlocks(b => b.IsSameConstructAs(Me)), tagRegex);
 
         Echo("offline"); wipe(); print("docking manager shut down");
     }

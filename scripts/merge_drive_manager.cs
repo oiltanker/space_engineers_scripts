@@ -1,5 +1,6 @@
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 @import lib.activeStabilization
 @import lib.pid
 
@@ -168,18 +169,17 @@ public void update() {
 public void init() {
     allWorking = false;
 
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     findDebugLcd(blocks, tagRegex);
     wipe();
-    controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
+    controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName)) as IMyShipController;
     if (controller != null) {
         var mat = controller.WorldMatrix;
 
         try {
             aMap = new Dictionary<dir, aPump>();
-            foreach (var ap in blocks.Where(b => b is IMyPistonBase && b.IsSameConstructAs(Me) && b.IsFunctional && tagRegex.IsMatch(b.CustomName)).Cast<IMyPistonBase>().GroupBy(p => matchDirClosest(p.WorldMatrix.Down, mat))) {
+            foreach (var ap in blocks.Where(b => b is IMyPistonBase && b.IsFunctional && tagRegex.IsMatch(b.CustomName)).Cast<IMyPistonBase>().GroupBy(p => matchDirClosest(p.WorldMatrix.Down, mat))) {
                 var piston1 = ap.AsEnumerable().First(); var piston2 = ap.AsEnumerable().Skip(1).First();
                 aMap.Add(ap.Key, new aPump(
                     new arm(piston1, blocks.Where(b => b is IMyShipMergeBlock && b.CubeGrid == piston1.TopGrid && b.IsFunctional).Cast<IMyShipMergeBlock>().ToList()),
@@ -198,9 +198,9 @@ public void init() {
         foreach (var b in blocks.Where(b => b is IMyThrust && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName))) (b as IMyThrust).Enabled = false;
 
         if (
-            (aMap.ContainsKey(dir.forward) != aMap.ContainsKey(dir.backward)) &&
-            (aMap.ContainsKey(dir.left) != aMap.ContainsKey(dir.right)) &&
-            (aMap.ContainsKey(dir.up) != aMap.ContainsKey(dir.down))
+            (aMap.ContainsKey(dir.forward) != aMap.ContainsKey(dir.backward) || (!aMap.ContainsKey(dir.forward) && !aMap.ContainsKey(dir.backward))) &&
+            (aMap.ContainsKey(dir.left) != aMap.ContainsKey(dir.right) || (!aMap.ContainsKey(dir.left) && !aMap.ContainsKey(dir.right))) &&
+            (aMap.ContainsKey(dir.up) != aMap.ContainsKey(dir.down) || (!aMap.ContainsKey(dir.up) && !aMap.ContainsKey(dir.down)))
         ) { allWorking = true; Echo($"speed\n{speed}"); }
         else { print("Wrongly built merge drive: wrong components"); Echo("error"); }
     } else { print("No main controller."); Echo("error"); }
@@ -235,9 +235,7 @@ public Program() {
         init();
         Runtime.UpdateFrequency = UpdateFrequency.Update1;
     } else {
-        var blocks = new List<IMyTerminalBlock>();
-        GridTerminalSystem.GetBlocks(blocks);
-        findDebugLcd(blocks, tagRegex);
+        findDebugLcd(getBlocks(b => b.IsSameConstructAs(Me)), tagRegex);
         Echo("offline");
         wipe();
         print("Merge drive shut down.");

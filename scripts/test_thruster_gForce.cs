@@ -1,4 +1,5 @@
 @import lib.printFull
+@import lib.grid
 
 const string pName = "@test program";
 public Program() {
@@ -8,8 +9,7 @@ public Program() {
 }
 
 public void Main(string argument, UpdateType updateSource) {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me))
 
     var controller = blocks.FirstOrDefault(b => b is IMyShipController && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {

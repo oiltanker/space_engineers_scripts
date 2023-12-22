@@ -1,19 +1,19 @@
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 
 public int state = 0;
 public IMyShipController controller = null;
 public IMyMotorAdvancedStator handJoint = null;
 public static readonly System.Text.RegularExpressions.Regex tagRegex = new System.Text.RegularExpressions.Regex(@"(\s|^)@vminer(\s|$)");
 public void init() {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
+    findDebugLcd(blocks, tagRegex);
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {
-        findDebugLcd(blocks, tagRegex);
         handJoint = blocks.FirstOrDefault(b => b is IMyMotorAdvancedStator && tagRegex.IsMatch(b.CustomName)) as IMyMotorAdvancedStator;
-    }
+    } else print("No main controller");
 }
 
 const string pName = "@vminer program";

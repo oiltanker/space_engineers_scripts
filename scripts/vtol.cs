@@ -1,5 +1,6 @@
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 @import lib.alignment
 @import lib.gyroArray
 @import lib.pid
@@ -37,7 +38,7 @@ public class vtol {
         if (orientation != dir.left && orientation != dir.right) throw new ArgumentException($"vtol only supports left or right rotors, got {orientation.ToString("G")}");
         this.orientation = orientation;
         this.rotor = rotor;
-        rotPid = new pidCtrl(2d, 0.05d, 0.1d, 1d / ENG_UPS, 0.95d);
+        rotPid = new pidCtrl(0.5d, 0.01d, 0.05d, 1d / ENG_UPS, 0.95d);
 
         thrusters = new List<IMyThrust>();
         tMap = new Dictionary<dir, List<IMyThrust>>();
@@ -190,16 +191,15 @@ public void update(double delta) {
 public void init() {
     allWorking = false;
 
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     findDebugLcd(blocks, tagRegex);
     wipe();
-    controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
+    controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName)) as IMyShipController;
     if (controller != null) {
         try {
-            connectors = blocks.Where(b => b is IMyShipConnector && b.IsSameConstructAs(Me)).Cast<IMyShipConnector>().ToList();
-            landingGear = blocks.Where(b => b is IMyLandingGear && b.IsSameConstructAs(Me)).Cast<IMyLandingGear>().ToList();
+            connectors = blocks.Where(b => b is IMyShipConnector).Cast<IMyShipConnector>().ToList();
+            landingGear = blocks.Where(b => b is IMyLandingGear).Cast<IMyLandingGear>().ToList();
 
             vtolManager?.shutdown();
             var rotors = blocks.Where(b => b is IMyMotorStator && b.CubeGrid == controller.CubeGrid && tagRegex.IsMatch(b.CustomName)).Cast<IMyMotorStator>();
@@ -241,9 +241,7 @@ public Program() {
         init();
         Runtime.UpdateFrequency = UpdateFrequency.Update1;
     } else {
-        var blocks = new List<IMyTerminalBlock>();
-        GridTerminalSystem.GetBlocks(blocks);
-        findDebugLcd(blocks, tagRegex);
+        findDebugLcd(getBlocks(b => b.IsSameConstructAs(Me)), tagRegex);
         Echo("offline"); wipe(); print("offline");
     }
 }

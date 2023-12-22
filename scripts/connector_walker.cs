@@ -8,6 +8,7 @@
  *   stop  - stops
  */
 @import lib.printFull
+@import lib.grid
 
 public const double dEPS = 0.001d;
 public const float EPS = 0.05f;
@@ -36,14 +37,14 @@ public class walker {
     public List<IMyPistonBase> hands;
     public IMyShipController control;
 
-    public walker(List<IMyTerminalBlock> blocks) {
+    public walker(IEnumerable<IMyTerminalBlock> blocks) {
         initComponents(blocks);
         print("Initialized: STATUS: " + (isOk ? "OK" : "BROKEN"));
     }
 
-    public void initComponents(List<IMyTerminalBlock> blocks) {
+    public void initComponents(IEnumerable<IMyTerminalBlock> blocks) {
         try {
-            var wBlocks = blocks.Where(b => tagRegex.IsMatch(b.CustomName)).ToList();
+            var wBlocks = blocks.Where(b => tagRegex.IsMatch(b.CustomName));
             var headM = wBlocks.FirstOrDefault(b => b is IMyShipMergeBlock && b.CustomName.Contains("@walker-head")) as IMyShipMergeBlock;
             var tailM = wBlocks.FirstOrDefault(b => b is IMyShipMergeBlock && b.CustomName.Contains("@walker-tail")) as IMyShipMergeBlock;
             var headC = wBlocks.FirstOrDefault(b => b is IMyShipConnector && b.CubeGrid == headM.CubeGrid && (b.Position - headM.Position).Length() <= 1) as IMyShipConnector;
@@ -173,8 +174,7 @@ public class walker {
 walker walkerO = null;
 
 public void init() {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     findDebugLcd(blocks, tagRegex);
     walkerO = new walker(blocks);

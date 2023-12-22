@@ -8,6 +8,7 @@
 
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 @import lib.gyroArray
 @import lib.pid
 
@@ -124,13 +125,12 @@ public List<IMyShipController> slaveControllers = null;
 public gyroCtrl gCtrl = null;
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@galign(\s|$)");
 public static readonly @Regex slaveTagRegex = new @Regex(@"(\s|^)@galign-slave(\s|$)");
-public void collectSlaveControllers(List<IMyTerminalBlock> blocks) {
+public void collectSlaveControllers(IEnumerable<IMyTerminalBlock> blocks) {
     slaveControllers = blocks.Where(b => b is IMyShipController && b.IsSameConstructAs(controller) && slaveTagRegex.IsMatch(b.CustomName)).Select(b => b as IMyShipController).ToList();
 }
 
 public void init() {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
     if (controller != null) {
@@ -146,8 +146,7 @@ public void stateUpdate() {
         return;
     }
 
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     collectSlaveControllers(blocks);
     findDebugLcd(blocks, tagRegex);

@@ -14,6 +14,7 @@
  *   stop  - stops mining process
  */
 @import lib.printFull
+@import lib.grid
 
 public const float EPS = 0.1f;
 
@@ -38,9 +39,9 @@ public class MineWalker {
     public List<IMyShipDrill> drills {get; private set;}
     public List<IMyShipWelder> welders {get; private set;}
 
-    public MineWalker(string storage) {
+    public MineWalker(string storage, IMyGridTerminalSystem gridTerminalSystem) {
         if (!string.IsNullOrEmpty(storage)) state = (State) Int32.Parse(storage);
-        initComponents();
+        initComponents(gridTerminalSystem);
         print("Initialized: STATUS: " + (isOk ? "OK" : "BROKEN"));
     }
 
@@ -48,7 +49,7 @@ public class MineWalker {
         return ((int) state).ToString();
     }
 
-    private bool getGroup<T>(string name, Action<List<T>> callback) where T: class {
+    private bool getGroup<T>(IMyGridTerminalSystem gridTerminalSystem, string name, Action<List<T>> callback) where T: class {
             IMyBlockGroup group = gridTerminalSystem.GetBlockGroupWithName(name);
             if (group == null) return false;
             List<T> blocks = new List<T>();
@@ -57,7 +58,7 @@ public class MineWalker {
             callback(blocks);
             return true;
     }
-    public void initComponents() {
+    public void initComponents(IMyGridTerminalSystem gridTerminalSystem) {
         try {
             merge = gridTerminalSystem.GetBlockWithName("[MINE Merge]") as IMyShipMergeBlock;
             baseC = gridTerminalSystem.GetBlockWithName("[MINE BaseC]") as IMyShipConnector;
@@ -66,8 +67,8 @@ public class MineWalker {
             rotor = gridTerminalSystem.GetBlockWithName("[MINE Rotor]") as IMyMotorAdvancedStator;
             if (
                 (merge == null || baseC == null || hand == null || headC == null || rotor == null) ||
-                (!getGroup<IMyShipDrill>("[MINE Drills]", (blocks) => drills = blocks)) ||
-                (!getGroup<IMyShipWelder>("[MINE Welders]", (blocks) => welders = blocks))
+                (!getGroup<IMyShipDrill>(gridTerminalSystem, "[MINE Drills]", (blocks) => drills = blocks)) ||
+                (!getGroup<IMyShipWelder>(gridTerminalSystem, "[MINE Welders]", (blocks) => welders = blocks))
             ) {
                 isOk = false;
                 return;
@@ -204,7 +205,6 @@ public Program() {
     initMeLcd();
 
     runtime = Runtime;
-    gridTerminalSystem = GridTerminalSystem;
 
     IMyTextSurface myLcd = Me.GetSurface(0);
     myLcd.ContentType = ContentType.TEXT_AND_IMAGE;
@@ -223,8 +223,7 @@ public void Save() {
 
 public void Main(string argument, UpdateType updateSource) {
     if (updateSource == UpdateType.Update10 || updateSource == UpdateType.Update100) {
-        var blocks = new List<IMyTerminalBlock>();
-        GridTerminalSystem.GetBlocks(blocks);
+        var blocks = getBlocks(b => b.IsSameConstructAs(Me));
         findDebugLcd(blocks, new @Regex("(\s|^)[MINE Panel](\s|$)"));
         if (mineState != null) mineState.update();
     }

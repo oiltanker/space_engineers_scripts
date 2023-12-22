@@ -1,4 +1,5 @@
 @import lib.printFull
+@import lib.grid
 
 public const float TIME_CLOSE_MS = 2000f;
 
@@ -89,13 +90,11 @@ public void runCheck() {
 
 public void updateDoors() {
     print("Updating doors ...");
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
 
-    doorsToClose = new Dictionary<IMyDoor, float>(); 
-    blocks.Where(b => b is IMyDoor && !(b is IMyAirtightHangarDoor) && b.IsSameConstructAs(Me)).Select(b => b as IMyDoor).ToList().ForEach(d => {
+    doorsToClose = new Dictionary<IMyDoor, float>();
+    foreach (var d in getBlocks(b => b is IMyDoor && !(b is IMyAirtightHangarDoor) && b.IsSameConstructAs(Me)).Cast<IMyDoor>()) {
         if (!doorsToClose.ContainsKey(d)) doorsToClose.Add(d, 0f);
-    });
+    }
 
     airlocks = new List<airlock>();
     var used = new List<IMyDoor>();

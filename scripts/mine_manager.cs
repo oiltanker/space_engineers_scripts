@@ -6,14 +6,15 @@
  *   stop  - stops mine management
  */
 
+@import lib.grid
+
 public int state = 0;
 public IMyProgrammableBlock control = null;
 public IMyCargoContainer cargo = null;
 public Action<string> print = null;
 
 public bool checkMineComps() {
-    var  blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks();
     if (control == null) control = blocks.Where(b => b is IMyProgrammableBlock && b.CustomName.StartsWith("[MINE Prog]")).FirstOrDefault() as IMyProgrammableBlock;
     if (cargo == null) cargo = blocks.Where(b => b is IMyCargoContainer && b.CustomName.StartsWith("[MINE Cargo]")).FirstOrDefault() as IMyCargoContainer;
     return control != null && control.IsWorking && cargo != null && cargo.IsWorking;

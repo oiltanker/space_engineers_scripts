@@ -1,5 +1,6 @@
 @import lib.eps
 @import lib.printFull
+@import lib.grid
 
 public static readonly @Regex tagRegex = new @Regex(@"(\s|^)@drill_inv_eq(\s|$)");
 public int state = 0;
@@ -41,11 +42,10 @@ public void update() {
 }
 
 public void init() {
-    var blocks = new List<IMyTerminalBlock>();
-    GridTerminalSystem.GetBlocks(blocks);
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     findDebugLcd(blocks, tagRegex);
-    drills = blocks.Where(b => b is IMyShipDrill && b.IsSameConstructAs(Me)).Select(b => b as IMyShipDrill).ToList();
+    drills = blocks.Where(b => b is IMyShipDrill).Select(b => b as IMyShipDrill).ToList();
 }
 
 const string pName = "@drill_inv_eq program";
