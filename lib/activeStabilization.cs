@@ -42,9 +42,9 @@ public class gStableArr {
         if (!passive) {
             var cRoll = controller.RollIndicator; var cPitch = controller.RotationIndicator.X; var cYaw = controller.RotationIndicator.Y;
             var rotVel = toLocalAVel(controller.GetShipVelocities().AngularVelocity, controller);
-            pRoll  = (cRoll  < -EPS || rotVel.Z > 0d) ? -60f : 60f; nRoll  = (cRoll  > EPS || rotVel.Z < 0d) ? 60f : -60f;
-            pPitch = (cPitch < -EPS || rotVel.X > 0d) ? -60f : 60f; nPitch = (cPitch > EPS || rotVel.X < 0d) ? 60f : -60f;
-            pYaw   = (cYaw   < -EPS || rotVel.Y > 0d) ? -60f : 60f; nYaw   = (cYaw   > EPS || rotVel.Y < 0d) ? 60f : -60f;
+            pRoll  = (cRoll  < -dEPS || rotVel.Z > 0d) ? -60f : 60f; nRoll  = (cRoll  > dEPS || rotVel.Z < 0d) ? 60f : -60f;
+            pPitch = (cPitch < -dEPS || rotVel.X > 0d) ? -60f : 60f; nPitch = (cPitch > dEPS || rotVel.X < 0d) ? 60f : -60f;
+            pYaw   = (cYaw   < -dEPS || rotVel.Y > 0d) ? -60f : 60f; nYaw   = (cYaw   > dEPS || rotVel.Y < 0d) ? 60f : -60f;
         } else {
             pRoll  = 60f; nRoll  = -60f;
             pPitch = 60f; nPitch = -60f;

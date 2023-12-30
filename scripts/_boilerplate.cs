@@ -18,7 +18,7 @@ public bool init() {
     findDebugLcd(blocks, tagRegex);
     wipe();
 
-    controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName) && b.CubeGrid == Me.CubeGrid) as IMyShipController;
+    controller = blocks.FirstOrDefault(b => b is IMyShipController && tagRegex.IsMatch(b.CustomName)) as IMyShipController;
     if (controller != null) {
         try {
         } catch (Exception e) {

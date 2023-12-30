@@ -139,7 +139,7 @@ public void update() {
 }
 
 public bool init() {
-    var blocks = getBlocks(b => b.IsSameConstructAs(Me))
+    var blocks = getBlocks(b => b.IsSameConstructAs(Me));
 
     findDebugLcd(blocks, tagRegex);
     wipe();
